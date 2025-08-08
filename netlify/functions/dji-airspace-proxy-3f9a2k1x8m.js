@@ -18,29 +18,55 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Fetch the URL
-    const response = await fetch(url);
-    const body = await response.text();
-    
-    // Get all headers from the original response
-    const headers = {};
-    response.headers.forEach((value, key) => {
-      // Skip security headers that might block the response
-      if (!['content-security-policy', 'x-frame-options'].includes(key.toLowerCase())) {
-        headers[key] = value;
+    // Fetch the URL with proper headers
+    const response = await fetch(url, {
+      headers: {
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'User-Agent': 'Mozilla/5.0 (compatible; DJI-Geozones-Proxy/1.0)'
       }
     });
     
-    // Add CORS headers
-    headers['Access-Control-Allow-Origin'] = '*';
-    headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS';
-    headers['Access-Control-Allow-Headers'] = 'Content-Type';
+    // Get the content type to determine how to handle the response
+    const contentType = response.headers.get('content-type') || '';
+    let body;
     
-    return {
-      statusCode: response.status,
-      headers: headers,
-      body: body
-    };
+    if (contentType.includes('application/json')) {
+      body = await response.json();
+      return {
+        statusCode: response.status,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      };
+    } else {
+      // For non-JSON responses, return as text
+      body = await response.text();
+      
+      // Get all headers from the original response
+      const headers = {};
+      response.headers.forEach((value, key) => {
+        // Skip security headers and encoding headers that might cause issues
+        if (!['content-security-policy', 'x-frame-options', 'content-encoding'].includes(key.toLowerCase())) {
+          headers[key] = value;
+        }
+      });
+      
+      // Add CORS headers
+      headers['Access-Control-Allow-Origin'] = '*';
+      headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS';
+      headers['Access-Control-Allow-Headers'] = 'Content-Type';
+      
+      return {
+        statusCode: response.status,
+        headers: headers,
+        body: body
+      };
+    }
   } catch (error) {
     return {
       statusCode: 500,

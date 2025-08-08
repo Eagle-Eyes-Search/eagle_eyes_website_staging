@@ -1,0 +1,146 @@
+---
+layout: null
+permalink: /dji-airspace.html
+---
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DJI Airspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/ol@7.3.0/ol.css" rel="stylesheet" />
+  <link href="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.css" rel="stylesheet" />
+  <style>
+    html,body,#map{height:100%;margin:0}
+    /* Hide DJI plugin drone selector */
+    .ol-dji-geozones--drone-selector{display:none!important}
+    /* Simple export button */
+    #exportGeojson,#exportLarge{position:absolute;z-index:1000;right:10px;padding:8px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer}
+    #exportGeojson{top:10px}
+    #exportLarge{top:50px}
+  </style>
+  <meta name="robots" content="noindex,nofollow" />
+</head>
+<body>
+  <button id="exportGeojson" title="Export visible geozones as GeoJSON">Export GeoJSON</button>
+  <button id="exportLarge" title="Export a large area by sweeping the view">Export Large Area</button>
+  <div id="map"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ol@7.3.0/dist/ol.js"></script>
+  <script src="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js"></script>
+  <script>
+    const map = new ol.Map({
+      target: 'map',
+      layers: [new ol.layer.Tile({ source: new ol.source.OSM() })],
+      view: new ol.View({ center: ol.proj.fromLonLat([-98.35, 39.5]), zoom: 5 })
+    });
+
+    const dji = new DjiGeozones({
+      urlProxy: 'https://api.allorigins.win/raw?url=',
+      createPanel: 'full',
+      startActive: true,
+      buffer: 60000, // try larger radius (may be limited by DJI)
+      showGeozoneIcons: false,
+      drone: 'dji-mavic-3'
+    });
+
+    map.addControl(dji);
+
+    // Ensure drone stays as Mavic 3 if control changes internally
+    dji.once('init', () => { dji.drone = 'dji-mavic-3'; });
+
+    // Export currently loaded (visible) features to GeoJSON
+    document.getElementById('exportGeojson').addEventListener('click', () => {
+      const fmt = new ol.format.GeoJSON();
+      const allFeatures = dji.layers.flatMap(layer => layer.getSource().getFeatures());
+      if (!allFeatures.length) {
+        alert('No geozones loaded yet. Zoom/pan to load some, then try again.');
+        return;
+      }
+      const geojson = fmt.writeFeatures(allFeatures, {
+        featureProjection: map.getView().getProjection(),
+        dataProjection: 'EPSG:4326'
+      });
+      const blob = new Blob([geojson], { type: 'application/geo+json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'dji-geozones.geojson';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    // Export a large area by sweeping the current map extent at a loadable zoom
+    document.getElementById('exportLarge').addEventListener('click', async () => {
+      const targetZoom = 10; // safe zoom for API
+      const loadBufferM = 50000; // meters between sweep centers (overlaps)
+      const maxTiles = 400; // safety cap
+
+      const fmt = new ol.format.GeoJSON();
+      const wktFmt = new ol.format.WKT();
+      const proj = map.getView().getProjection();
+
+      // Compute grid over current view extent in map projection (meters)
+      const extent = map.getView().calculateExtent(map.getSize());
+      const minX = extent[0], minY = extent[1], maxX = extent[2], maxY = extent[3];
+      const step = loadBufferM; // stride in meters
+      const centers = [];
+      for (let x = minX + step/2; x < maxX; x += step) {
+        for (let y = minY + step/2; y < maxY; y += step) {
+          centers.push([x, y]);
+          if (centers.length >= maxTiles) break;
+        }
+        if (centers.length >= maxTiles) break;
+      }
+
+      if (!centers.length) { alert('Area too small or zoomed in too far. Zoom out a bit and try again.'); return; }
+
+      const seen = new Set();
+      const collected = [];
+
+      const ctrlEl = () => document.querySelector('.ol-dji-geozones');
+      const isLoading = () => ctrlEl() && ctrlEl().classList.contains('ol-dji-geozones--isLoading');
+
+      for (let i = 0; i < centers.length; i += 1) {
+        const c = centers[i];
+        map.getView().setCenter(c);
+        map.getView().setZoom(targetZoom);
+
+        // Wait for loading to start and finish (with timeouts)
+        const start = Date.now();
+        while (!isLoading() && Date.now() - start < 1500) { await new Promise(r => setTimeout(r, 50)); }
+        const loadStart = Date.now();
+        while (isLoading() && Date.now() - loadStart < 6000) { await new Promise(r => setTimeout(r, 100)); }
+        await new Promise(r => setTimeout(r, 250));
+
+        // Collect features loaded at this center
+        dji.layers.forEach(layer => {
+          layer.getSource().getFeatures().forEach(f => {
+            try {
+              const w = wktFmt.writeFeature(f, { featureProjection: proj, dataProjection: 'EPSG:4326' });
+              const lvl = f.get('level') ?? f.get('LEVEL') ?? '';
+              const key = lvl + '|' + w;
+              if (!seen.has(key)) { seen.add(key); collected.push(f.clone()); }
+            } catch (e) { /* ignore */ }
+          });
+        });
+      }
+
+      if (!collected.length) { alert('No features collected. Try zooming in a bit and retry.'); return; }
+
+      const geojson = fmt.writeFeatures(collected, { featureProjection: proj, dataProjection: 'EPSG:4326' });
+      const blob = new Blob([geojson], { type: 'application/geo+json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'dji-geozones-large.geojson';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

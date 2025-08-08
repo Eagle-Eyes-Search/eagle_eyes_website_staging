@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DJI Airspace Proxy Test</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@6.15.1/ol.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@7.3.0/ol.css">
     <link rel="stylesheet" href="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.css">
     <style>
         html, body, #map {
@@ -16,70 +16,30 @@
 <body>
     <div id="map"></div>
     
-    <script src="https://cdn.jsdelivr.net/npm/ol@6.15.1/dist/ol.js" onload="initMap()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ol@7.3.0/dist/ol.js"></script>
+    <script src="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js"></script>
     <script>
-        function initMap() {
-            // Wait a bit more to ensure OpenLayers is fully initialized
-            setTimeout(function() {
-                try {
-                    console.log('Starting map initialization...');
-                    console.log('ol available:', typeof ol);
-                    
-                    if (typeof ol === 'undefined') {
-                        throw new Error('OpenLayers (ol) is not loaded');
-                    }
-                    
-                    // Create map first
-                    const map = new ol.Map({
-                        target: 'map',
-                        layers: [
-                            new ol.layer.Tile({
-                                source: new ol.source.OSM()
-                            })
-                        ],
-                        view: new ol.View({
-                            center: ol.proj.fromLonLat([-98.35, 39.5]),
-                            zoom: 5
-                        })
-                    });
-                    
-                    console.log('Map created successfully');
-                    
-                    // Now load DJI geozones after map is created
-                    const script = document.createElement('script');
-                    script.src = 'https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js';
-                    script.onload = function() {
-                        console.log('DJI Geozones script loaded');
-                        console.log('DjiGeozones available:', typeof DjiGeozones);
-                        
-                        if (typeof DjiGeozones === 'undefined') {
-                            throw new Error('DjiGeozones is not loaded');
-                        }
-                        
-                        const dji = new DjiGeozones({
-                            urlProxy: '/.netlify/functions/dji-airspace-proxy-3f9a2k1x8m?url=',
-                            createPanel: 'full',
-                            startActive: true,
-                            buffer: 10000
-                        });
-                        
-                        console.log('DjiGeozones control created');
-                        map.addControl(dji);
-                        console.log('Control added to map');
-                        
-                    };
-                    script.onerror = function() {
-                        console.error('Failed to load DJI Geozones script');
-                        document.getElementById('map').innerHTML = '<div style="padding: 20px; color: red;">Failed to load DJI Geozones script</div>';
-                    };
-                    document.head.appendChild(script);
-                    
-                } catch (error) {
-                    console.error('Error initializing map:', error);
-                    document.getElementById('map').innerHTML = '<div style="padding: 20px; color: red;">Error loading map: ' + error.message + '</div>';
-                }
-            }, 500);
-        }
+        const map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([-98.35, 39.5]),
+                zoom: 5
+            })
+        });
+
+        const dji = new DjiGeozones({
+            urlProxy: '/.netlify/functions/dji-airspace-proxy-3f9a2k1x8m?url=',
+            createPanel: 'compact',
+            startActive: true,
+            buffer: 60000
+        });
+        
+        map.addControl(dji);
     </script>
 </body>
 </html> 

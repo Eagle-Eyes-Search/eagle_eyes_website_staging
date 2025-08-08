@@ -17,10 +17,22 @@
     <div id="map"></div>
     
     <script src="https://cdn.jsdelivr.net/npm/ol@6.15.1/dist/ol.js"></script>
-    <script src="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js"></script>
-    
     <script>
-        // Wait for both scripts to load
+        // Wait for OpenLayers to load, then load DJI geozones
+        function loadDJIGeozones() {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js';
+            script.onload = function() {
+                console.log('DJI Geozones script loaded');
+                initMap();
+            };
+            script.onerror = function() {
+                console.error('Failed to load DJI Geozones script');
+                document.getElementById('map').innerHTML = '<div style="padding: 20px; color: red;">Failed to load DJI Geozones script</div>';
+            };
+            document.head.appendChild(script);
+        }
+        
         function initMap() {
             try {
                 console.log('Starting map initialization...');
@@ -67,12 +79,13 @@
             }
         }
         
-        // Check if scripts are loaded, otherwise wait
-        if (typeof ol !== 'undefined' && typeof DjiGeozones !== 'undefined') {
-            initMap();
+        // Start loading DJI geozones after OpenLayers is loaded
+        if (typeof ol !== 'undefined') {
+            console.log('OpenLayers loaded, loading DJI geozones...');
+            loadDJIGeozones();
         } else {
-            // Wait a bit for scripts to load
-            setTimeout(initMap, 1000);
+            console.log('Waiting for OpenLayers to load...');
+            setTimeout(loadDJIGeozones, 1000);
         }
     </script>
 </body>

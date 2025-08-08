@@ -10,6 +10,14 @@ exports.handler = async function(event, context) {
   // Get the URL from query parameters
   const url = event.queryStringParameters?.url;
   
+  // Log the full URL at the start
+  console.log('PROXY REQUEST URL:', url);
+  
+  // If URL contains .png, log TILE
+  if (url && url.includes('.png')) {
+    console.log('TILE');
+  }
+  
   if (!url) {
     return {
       statusCode: 400,

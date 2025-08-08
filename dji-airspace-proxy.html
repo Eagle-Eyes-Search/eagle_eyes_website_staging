@@ -11,14 +11,107 @@
             height: 100%;
             margin: 0;
         }
+        
+        #debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 11px;
+            max-width: 400px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        #debug-panel.show {
+            display: block;
+        }
+        
+        #debug-url {
+            word-break: break-all;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px;
+            border-radius: 3px;
+        }
+        
+        #copy-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        
+        #copy-btn:hover {
+            background: #0056b3;
+        }
+        
+        #debug-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            z-index: 1001;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <button id="debug-toggle">Debug URLs</button>
+    <div id="debug-panel">
+        <div id="debug-url">No requests yet...</div>
+        <button id="copy-btn">Copy URL</button>
+    </div>
     
     <script src="https://cdn.jsdelivr.net/npm/ol@7.3.0/dist/ol.js"></script>
     <script src="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js"></script>
     <script>
+        // Debug panel functionality
+        const debugPanel = document.getElementById('debug-panel');
+        const debugUrl = document.getElementById('debug-url');
+        const debugToggle = document.getElementById('debug-toggle');
+        const copyBtn = document.getElementById('copy-btn');
+        let latestProxyUrl = '';
+
+        debugToggle.addEventListener('click', () => {
+            debugPanel.classList.toggle('show');
+        });
+
+        copyBtn.addEventListener('click', () => {
+            if (latestProxyUrl) {
+                navigator.clipboard.writeText(latestProxyUrl);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy URL';
+                }, 1000);
+            }
+        });
+
+        // Override fetch to intercept proxy requests
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const url = args[0];
+            if (typeof url === 'string' && url.includes('/.netlify/functions/dji-airspace-proxy') && url.includes('.png')) {
+                latestProxyUrl = url;
+                debugUrl.textContent = url;
+                console.log('Proxy tile request:', url);
+            }
+            return originalFetch.apply(this, args);
+        };
+
         const map = new ol.Map({
             target: 'map',
             layers: [

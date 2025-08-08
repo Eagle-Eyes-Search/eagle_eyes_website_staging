@@ -6,7 +6,7 @@
     <title>DJI Airspace Proxy Test</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css" type="text/css">
     <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ol-dji-geozones@latest/dist/ol-dji-geozones.js"></script>
+    <script src="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -38,7 +38,7 @@
         });
 
         // Add DJI geozones control with proxy
-        const djiControl = new ol.control.DJIGeozones({
+        const djiControl = new DjiGeozones({
             urlProxy: '/.netlify/functions/dji-airspace-proxy-3f9a2k1x8m?url='
         });
         

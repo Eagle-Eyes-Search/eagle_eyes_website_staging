@@ -1,332 +1,48 @@
----
-layout: empty
-permalink: /dji-airspace-proxy.html
----
-
-<div class="map-controls">
-  <div class="row">
-    <a class="ee-btn ee-btn--ghost" href="{{ '/' | relative_url }}" title="Back">← Back</a>
-    <button id="exportGeojson" class="ee-btn" title="Export cached + viewport as GeoJSON">Export GeoJSON</button>
-  </div>
-  <div class="row">
-    <label class="lbl" for="basemap">Basemap</label>
-    <select id="basemap" class="select">
-      <option value="satellite" selected>Satellite (Esri)</option>
-      <option value="osm">OSM Standard</option>
-      <option value="carto-light">Carto Light</option>
-      <option value="carto-dark">Carto Dark</option>
-      <option value="stamen-terrain">Stamen Terrain</option>
-    </select>
-  </div>
-  <div id="zoomHint" class="hint" hidden>
-    <span>Zoom in to load geozones</span>
-    <button id="zoomToBtn" class="ee-btn ee-btn--tiny">Zoom</button>
-  </div>
-</div>
-
-<div id="map"></div>
-<div id="toast" class="ee-toast" hidden></div>
-
-<link href="https://cdn.jsdelivr.net/npm/ol@7.3.0/ol.css" rel="stylesheet" />
-<link href="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.css" rel="stylesheet" />
-<style>
-  html, body { height: 100%; margin: 0; overflow: hidden; }
-  #map { position: fixed; inset: 0; }
-  .map-controls {
-    position: fixed; top: 12px; left: 12px; z-index: 1001; display: grid; gap: 8px;
-    background: rgba(255,255,255,.92); border: 1px solid #e6e6e6; padding: 10px; border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(0,0,0,.08);
-  }
-  .map-controls .row { display: flex; align-items: center; gap: 8px; }
-  .map-controls .lbl { font-size: 12px; color: #555; }
-  .map-controls .select { font-size: 13px; padding: 6px 8px; border-radius: 6px; border: 1px solid #d9d9d9; }
-  .ee-btn {
-    border: 1px solid #1f71ff; background: #1f71ff; color: #fff; border-radius: 6px;
-    padding: 8px 12px; font-size: 14px; cursor: pointer; transition: all .15s ease;
-  }
-  .ee-btn:hover { filter: brightness(0.96); }
-  .ee-btn--ghost { background: transparent; border-color: #d9d9d9; color: #333; text-decoration: none; }
-  .ee-btn--tiny { padding: 6px 10px; font-size: 12px; }
-  .hint { display: flex; align-items: center; gap: 10px; }
-
-  /* Hide drone selector from plugin */
-  .ol-dji-geozones--drone-selector{ display: none !important; }
-
-  /* Toast */
-  .ee-toast { position: fixed; right: 16px; bottom: 16px; background: #1f71ff; color:#fff; padding: 10px 12px; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.15); z-index: 1001; }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/ol@7.3.0/dist/ol.js"></script>
-<script src="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js"></script>
-<script>
-  const SATELLITE = new ol.layer.Tile({
-    source: new ol.source.XYZ({
-      attributions: 'Tiles © Esri',
-      url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      maxZoom: 19
-    })
-  });
-  const OSM_STD = new ol.layer.Tile({
-    source: new ol.source.OSM()
-  });
-  const CARTO_LIGHT = new ol.layer.Tile({
-    source: new ol.source.XYZ({
-      url: 'https://{1-4}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-      attributions: '© OpenStreetMap contributors, © CARTO'
-    })
-  });
-  const CARTO_DARK = new ol.layer.Tile({
-    source: new ol.source.XYZ({
-      url: 'https://{1-4}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-      attributions: '© OpenStreetMap contributors, © CARTO'
-    })
-  });
-  const STAMEN_TERRAIN = new ol.layer.Tile({
-    source: new ol.source.Stamen({
-      layer: 'terrain'
-    })
-  });
-
-  const map = new ol.Map({
-    target: 'map',
-    layers: [SATELLITE],
-    view: new ol.View({ center: ol.proj.fromLonLat([-98.35, 39.5]), zoom: 5 })
-  });
-
-  const dji = new DjiGeozones({
-    urlProxy: '/.netlify/functions/dji-airspace-proxy-3f9a2k1x8m?url=',
-    createPanel: 'full',
-    startActive: true,
-    buffer: 60000,
-    showGeozoneIcons: false,
-    drone: 'dji-mavic-3'
-  });
-  map.addControl(dji);
-
-  // Persistent cache overlay (independent of plugin visibility)
-  const levelColors = {
-    0: 'rgba(255,165,0,0.35)',   // Warning
-    1: 'rgba(255,140,0,0.35)',   // Authorization
-    2: 'rgba(255,0,0,0.35)',     // Restricted
-    3: 'rgba(255,215,0,0.35)',   // Enhanced Warning
-    4: 'rgba(135,206,235,0.35)', // Regulatory Restricted
-    6: 'rgba(128,128,128,0.25)', // Altitude Zones
-    7: 'rgba(0,128,0,0.25)'      // Recommended
-  };
-  const cachedSource = new ol.source.Vector();
-  const CACHED_LAYER = new ol.layer.Vector({
-    source: cachedSource,
-    style: (feat) => {
-      const lvl = feat.get('level') ?? feat.get('LEVEL');
-      const fill = levelColors[lvl] || 'rgba(0,123,255,0.20)';
-      return new ol.style.Style({
-        stroke: new ol.style.Stroke({ color: 'rgba(0,0,0,0.35)', width: 1 }),
-        fill: new ol.style.Fill({ color: fill })
-      });
-    }
-  });
-  map.addLayer(CACHED_LAYER);
-
-  // Basemap switcher
-  const basemapSelect = document.getElementById('basemap');
-  function setBasemap(name){
-    [SATELLITE, OSM_STD, CARTO_LIGHT, CARTO_DARK, STAMEN_TERRAIN].forEach(l => map.removeLayer(l));
-    const choice = { satellite: SATELLITE, osm: OSM_STD, 'carto-light': CARTO_LIGHT, 'carto-dark': CARTO_DARK, 'stamen-terrain': STAMEN_TERRAIN }[name];
-    if (choice) map.getLayers().insertAt(0, choice);
-  }
-  basemapSelect.addEventListener('change', (e)=> setBasemap(e.target.value));
-
-  // Zoom guidance UI
-  const zoomHint = document.getElementById('zoomHint');
-  const zoomBtn = document.getElementById('zoomToBtn');
-  const toast = document.getElementById('toast');
-  const MIN_Z = 9;
-  function updateZoomHint() {
-    const z = Math.round(map.getView().getZoom());
-    const show = z < MIN_Z;
-    zoomHint.hidden = !show;
-  }
-  map.getView().on('change:resolution', updateZoomHint);
-  updateZoomHint();
-  zoomBtn.addEventListener('click', () => {
-    map.getView().animate({ zoom: MIN_Z, duration: 300 });
-  });
-
-  // Cache features seen while navigating (persist + render on overlay)
-  const cachedKeys = new Set();
-  const cachedFeatures = [];
-  const wktFmtForCache = new ol.format.WKT();
-  const geojsonFmt = new ol.format.GeoJSON();
-  let saveTimer = null;
-  const DB_NAME = 'dji_geozone_cache_v1';
-  const STORE = 'fc';
-
-  function featureKey(f, proj){
-    try {
-      const w = wktFmtForCache.writeFeature(f, { featureProjection: proj, dataProjection: 'EPSG:4326' });
-      const lvl = f.get('level') ?? f.get('LEVEL') ?? '';
-      return lvl + '|' + w;
-    } catch { return null; }
-  }
-
-  function cacheCurrentFeatures(){
-    const proj = map.getView().getProjection();
-    dji.layers.forEach(layer => {
-      layer.getSource().getFeatures().forEach(f => {
-        const key = featureKey(f, proj);
-        if (!key) return;
-        if (!cachedKeys.has(key)) {
-          cachedKeys.add(key);
-          const clone = f.clone();
-          cachedFeatures.push(clone);
-          // Add to overlay in map projection
-          const featMapProj = f.clone();
-          try { featMapProj.getGeometry().transform('EPSG:4326', proj); } catch {}
-          cachedSource.addFeature(featMapProj);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJI Airspace Proxy Test</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ol-dji-geozones@latest/dist/ol-dji-geozones.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
         }
-      });
-    });
-    schedulePersist();
-  }
-  map.on('moveend', () => setTimeout(cacheCurrentFeatures, 300));
-  dji.once('init', cacheCurrentFeatures);
-
-  function schedulePersist(){
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(persistCache, 500);
-  }
-
-  async function openDB(){
-    return await new Promise((resolve, reject) => {
-      try {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      } catch (e) { reject(e); }
-    });
-  }
-
-  async function idbSet(key, value){
-    try {
-      const db = await openDB();
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).put(value, key);
-        tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
-      });
-      db.close();
-    } catch {}
-  }
-
-  async function idbGet(key){
-    try {
-      const db = await openDB();
-      const val = await new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE, 'readonly');
-        const req = tx.objectStore(STORE).get(key);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-      db.close();
-      return val;
-    } catch { return null; }
-  }
-
-  async function persistCache(){
-    try {
-      const proj = map.getView().getProjection();
-      const geojson = geojsonFmt.writeFeatures(cachedFeatures, { featureProjection: proj, dataProjection: 'EPSG:4326' });
-      await idbSet('all', geojson);
-    } catch {}
-  }
-
-  (async function loadPersisted(){
-    const proj = map.getView().getProjection();
-    const text = await idbGet('all');
-    if (!text) return;
-    try {
-      const feats = geojsonFmt.readFeatures(text, { featureProjection: proj, dataProjection: 'EPSG:4326' });
-      cachedSource.addFeatures(feats.map(f=>f.clone()));
-      // rebuild keys and memory cache
-      feats.forEach(f => {
-        const key = featureKey(f, proj);
-        if (key && !cachedKeys.has(key)) { cachedKeys.add(key); cachedFeatures.push(f.clone()); }
-      });
-      showToast(`Loaded ${cachedFeatures.length} cached features`);
-    } catch {}
-  })();
-
-  // Export largest possible area: union of cached + sweep of current view
-  document.getElementById('exportGeojson').addEventListener('click', async () => {
-    const targetZoom = 10;
-    const strideMeters = 50000;
-    const maxTiles = 400;
-
-    const extent = map.getView().calculateExtent(map.getSize());
-    const [minX, minY, maxX, maxY] = extent;
-    const centers = [];
-    for (let x = minX + strideMeters/2; x < maxX; x += strideMeters) {
-      for (let y = minY + strideMeters/2; y < maxY; y += strideMeters) {
-        centers.push([x,y]);
-        if (centers.length >= maxTiles) break;
-      }
-      if (centers.length >= maxTiles) break;
-    }
-    if (!centers.length) { showToast('Area too small. Zoom out a bit and retry.'); return; }
-
-    const initialCenter = map.getView().getCenter();
-    const initialZoom = map.getView().getZoom();
-
-    const collectedFeatures = new Set(cachedFeatures.map(f => f.clone()));
-
-    const ctrlEl = () => document.querySelector('.ol-dji-geozones');
-    const isLoading = () => ctrlEl() && ctrlEl().classList.contains('ol-dji-geozones--isLoading');
-
-    for (const c of centers) {
-      map.getView().setCenter(c);
-      map.getView().setZoom(targetZoom);
-      const start = Date.now();
-      while (!isLoading() && Date.now() - start < 1500) await sleep(50);
-      const loadStart = Date.now();
-      while (isLoading() && Date.now() - loadStart < 6000) await sleep(100);
-      await sleep(250);
-
-      dji.layers.forEach(layer => {
-        layer.getSource().getFeatures().forEach(f => {
-          try {
-            const w = wktFmtForCache.writeFeature(f, { featureProjection: map.getView().getProjection(), dataProjection: 'EPSG:4326' });
-            const lvl = f.get('level') ?? f.get('LEVEL') ?? '';
-            const key = lvl + '|' + w;
-            if (!collectedFeatures.has(key)) {
-              collectedFeatures.add(f.clone());
-            }
-          } catch (e) { console.error("Error adding feature to collected set:", e); }
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <script>
+        // Create the map
+        const map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([-122.4194, 37.7749]), // San Francisco
+                zoom: 10
+            })
         });
-      });
-    }
 
-    // Restore initial view
-    map.getView().setCenter(initialCenter);
-    map.getView().setZoom(initialZoom);
-
-    if (!collectedFeatures.size) { showToast('No geozones collected. Zoom in and try again.'); return; }
-
-    const features = Array.from(collectedFeatures);
-    const geojson = geojsonFmt.writeFeatures(features, { featureProjection: map.getView().getProjection(), dataProjection: 'EPSG:4326' });
-    downloadBlob(geojson, 'dji-geozones.geojson', 'application/geo+json');
-  });
-
-  function downloadBlob(text, name, type) {
-    const blob = new Blob([text], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
-  }
-  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-  function showToast(msg){ toast.textContent = msg; toast.hidden = false; setTimeout(()=> toast.hidden = true, 2500); }
-</script> 
+        // Add DJI geozones control with proxy
+        const djiControl = new ol.control.DJIGeozones({
+            urlProxy: '/.netlify/functions/dji-airspace-proxy-3f9a2k1x8m?url='
+        });
+        
+        map.addControl(djiControl);
+    </script>
+</body>
+</html> 

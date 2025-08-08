@@ -1,0 +1,14 @@
+{
+  "name": "eagleeyes-dji-proxy",
+  "version": "1.0.0",
+  "description": "DJI Airspace Proxy for Netlify",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+  },
+  "keywords": ["dji", "airspace", "proxy", "netlify"],
+  "author": "",
+  "license": "ISC"
+} 

@@ -17,30 +17,43 @@
     <div id="map"></div>
     
     <script src="https://unpkg.com/ol@6.15.1/dist/ol.js"></script>
-    <script src="https://unpkg.com/ol-dji-geozones@2.3.0"></script>
+    <script src="https://unpkg.com/ol-dji-geozones@2.3.0/dist/ol-dji-geozones.min.js"></script>
     
     <script>
-        const map = new ol.Map({
-            target: 'map',
-            layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
+        try {
+            console.log('Starting map initialization...');
+            
+            const map = new ol.Map({
+                target: 'map',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    })
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([-98.35, 39.5]),
+                    zoom: 5
                 })
-            ],
-            view: new ol.View({
-                center: ol.proj.fromLonLat([-98.35, 39.5]),
-                zoom: 5
-            })
-        });
-
-        const dji = new DjiGeozones({
-            urlProxy: '/.netlify/functions/dji-airspace-proxy-3f9a2k1x8m?url=',
-            createPanel: 'full',
-            startActive: true,
-            buffer: 10000
-        });
-        
-        map.addControl(dji);
+            });
+            
+            console.log('Map created successfully');
+            console.log('DjiGeozones available:', typeof DjiGeozones);
+            
+            const dji = new DjiGeozones({
+                urlProxy: '/.netlify/functions/dji-airspace-proxy-3f9a2k1x8m?url=',
+                createPanel: 'full',
+                startActive: true,
+                buffer: 10000
+            });
+            
+            console.log('DjiGeozones control created');
+            map.addControl(dji);
+            console.log('Control added to map');
+            
+        } catch (error) {
+            console.error('Error initializing map:', error);
+            document.getElementById('map').innerHTML = '<div style="padding: 20px; color: red;">Error loading map: ' + error.message + '</div>';
+        }
     </script>
 </body>
 </html> 

@@ -341,7 +341,7 @@ permalink: /livestream/
             </button>
             <button
               id="leaveBtn"
-              class="btn btn-dark"
+              class="btn btn-danger"
               onclick="leaveRoom()"
               disabled
             >
@@ -450,6 +450,31 @@ permalink: /livestream/
       </div>
     </nav>
 
+
+    <!-- Share Modal -->
+    <div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bg-dark text-white">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title" id="shareModalLabel">Share Livestream</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <p class="mb-3">Scan the QR code to view this livestream on another device</p>
+            <div id="qrcode" class="d-flex justify-content-center mb-3" style="background: white; padding: 15px; border-radius: 8px; display: inline-block; margin: 0 auto;"></div>
+            <button class="btn btn-primary w-100 mb-3" onclick="shareLivestream()">
+              <i class="bi bi-share"></i> Share Livestream Link
+            </button>
+            <div class="text-muted small">
+              <div class="mb-1">Or</div>
+              <div class="mb-2">Copy the following Room ID into the Join Livestream window on another device:</div>
+              <div class="font-monospace text-white fs-5" id="modalRoomId">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Join Livestream Modal -->
     <div class="modal fade" id="joinModal" tabindex="-1" aria-labelledby="joinModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
@@ -516,30 +541,6 @@ permalink: /livestream/
       </div>
     </div>
 
-    <!-- Share Modal -->
-    <div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content bg-dark text-white">
-          <div class="modal-header border-secondary">
-            <h5 class="modal-title" id="shareModalLabel">Share Livestream</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body text-center">
-            <p class="mb-3">Scan the QR code to view this livestream on another device</p>
-            <div id="qrcode" class="d-flex justify-content-center mb-3" style="background: white; padding: 15px; border-radius: 8px; display: inline-block; margin: 0 auto;"></div>
-            <button class="btn btn-primary w-100 mb-3" onclick="shareLivestream()">
-              <i class="bi bi-share"></i> Share Livestream Link
-            </button>
-            <div class="text-muted small">
-              <div class="mb-1">Or</div>
-              <div class="mb-2">Copy the following Room ID into the Join Livestream window on another device:</div>
-              <div class="font-monospace text-white fs-5" id="modalRoomId">-</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Toast Notification - Below share button -->
     <div class="toast-container position-fixed" id="toastContainer" style="display: none;">
       <div id="copyToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" style="width: auto; min-width: fit-content;">
@@ -576,7 +577,7 @@ permalink: /livestream/
         <div class="d-grid gap-2 mb-3">
           <button
             id="leaveBtnMobile"
-            class="btn btn-dark"
+            class="btn btn-danger"
             onclick="leaveRoom()"
             disabled
           >
@@ -1257,6 +1258,7 @@ permalink: /livestream/
           joinRoomFromModal();
         }
       });
+
     </script>
   </body>
 </html>

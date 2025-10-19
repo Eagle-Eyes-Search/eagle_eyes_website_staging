@@ -947,6 +947,56 @@ permalink: /faq/
                             info@EagleEyesSearch.com
                         </span>
                     </p>
+                    <p style="margin: 15px 0; color: #555; font-size: 1.5rem; font-weight: 500;">or</p>
+                    <button onclick="openQuestionModal()" style="background: #1e90ff; color: white; border: none; padding: 14px 32px; font-size: 1.4rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(30, 144, 255, 0.3);" onmouseover="this.style.background='#1873cc'; this.style.boxShadow='0 4px 12px rgba(30, 144, 255, 0.4)';" onmouseout="this.style.background='#1e90ff'; this.style.boxShadow='0 2px 8px rgba(30, 144, 255, 0.3)';">
+                        Submit a Question Here
+                    </button>
+                </div>
+
+                <!-- Question Submission Modal -->
+                <div id="questionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 10000; justify-content: center; align-items: center;">
+                    <div style="background: white; border-radius: 12px; padding: 35px; max-width: 550px; width: 90%; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); position: relative;">
+                        <button onclick="closeQuestionModal()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 28px; color: #999; cursor: pointer; line-height: 1; padding: 0; width: 30px; height: 30px;" onmouseover="this.style.color='#333';" onmouseout="this.style.color='#999';">&times;</button>
+                        
+                        <h2 style="margin: 0 0 25px 0; color: #333; font-size: 2rem;">Submit Your Question</h2>
+                        
+                        <form id="questionForm" onsubmit="submitQuestion(event)">
+                            <div style="margin-bottom: 15px;">
+                                <label for="userEmail" style="display: block; margin-bottom: 6px; color: #333; font-weight: 600; font-size: 1.2rem;">Email Address <span style="color: red;">*</span></label>
+                                <input type="email" id="userEmail" required style="width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1.2rem; box-sizing: border-box; transition: border-color 0.3s;" onfocus="this.style.borderColor='#1e90ff';" onblur="this.style.borderColor='#e0e0e0';" placeholder="your@email.com">
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label for="userName" style="display: block; margin-bottom: 6px; color: #333; font-weight: 600; font-size: 1.2rem;">Name</label>
+                                <input type="text" id="userName" style="width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1.2rem; box-sizing: border-box; transition: border-color 0.3s;" onfocus="this.style.borderColor='#1e90ff';" onblur="this.style.borderColor='#e0e0e0';" placeholder="Your name">
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label for="userOrganization" style="display: block; margin-bottom: 6px; color: #333; font-weight: 600; font-size: 1.2rem;">Organization</label>
+                                <input type="text" id="userOrganization" style="width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1.2rem; box-sizing: border-box; transition: border-color 0.3s;" onfocus="this.style.borderColor='#1e90ff';" onblur="this.style.borderColor='#e0e0e0';" placeholder="Your organization">
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label for="userQuestion" style="display: block; margin-bottom: 6px; color: #333; font-weight: 600; font-size: 1.2rem;">Question <span style="color: red;">*</span></label>
+                                <textarea id="userQuestion" required rows="5" style="width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1.2rem; box-sizing: border-box; resize: vertical; font-family: inherit; transition: border-color 0.3s;" onfocus="this.style.borderColor='#1e90ff';" onblur="this.style.borderColor='#e0e0e0';" placeholder="What would you like to know?"></textarea>
+                            </div>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <label for="userFile" style="display: block; margin-bottom: 6px; color: #333; font-weight: 600; font-size: 1.2rem;">Attachment (Optional)</label>
+                                <input type="file" id="userFile" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1.1rem; box-sizing: border-box; transition: border-color 0.3s; background: white;" onfocus="this.style.borderColor='#1e90ff';" onblur="this.style.borderColor='#e0e0e0';">
+                                <small style="display: block; margin-top: 6px; color: #999; font-size: 1rem;">Max file size: 50MB</small>
+                            </div>
+                            
+                            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                                <button type="button" onclick="closeQuestionModal()" style="background: #f0f0f0; color: #333; border: none; padding: 14px 28px; font-size: 1.2rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background 0.3s;" onmouseover="this.style.background='#e0e0e0';" onmouseout="this.style.background='#f0f0f0';">
+                                    Cancel
+                                </button>
+                                <button type="submit" id="submitBtn" style="background: #1e90ff; color: white; border: none; padding: 14px 28px; font-size: 1.2rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 8px rgba(30, 144, 255, 0.3);" onmouseover="this.style.background='#1873cc';" onmouseout="this.style.background='#1e90ff';">
+                                    Submit Question
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1261,7 +1311,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const contactSection = document.querySelector('.faq-contact-section');
         
         if (results.length === 0) {
-            searchMeta.innerHTML = `<span style="font-size: 1.6rem; line-height: 1.6;">We're updating our FAQ resources and don't have an answer available for your specific question at this time. Please reach out to us at <span class="faq-email-link" onclick="copyEmailToClipboard()" style="color: #1e90ff; cursor: pointer; text-decoration: underline; font-weight: 500; font-size: 1.6rem;">info@EagleEyesSearch.com</span> with your question and we'll be happy to get back to you with an answer.</span>`;
+            searchMeta.innerHTML = `
+                <div style="margin-top: 30px; padding: 30px; background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%); border-radius: 12px; text-align: center;">
+                    <h3 style="margin-bottom: 15px; color: #333; font-size: 2.2rem; font-weight: 600;">Question not answered here?</h3>
+                    <p style="margin-bottom: 20px; color: #555; font-size: 1.7rem; line-height: 1.5;">
+                        Contact us at 
+                        <span class="faq-email-link" onclick="copyEmailToClipboard()" style="color: #1e90ff; cursor: pointer; text-decoration: underline; font-weight: 500; transition: all 0.3s ease; padding: 4px 8px; border-radius: 4px; display: inline-block; font-size: 1.7rem;" 
+                             onmouseover="this.style.backgroundColor='#1e90ff'; this.style.color='white';" 
+                             onmouseout="this.style.backgroundColor='transparent'; this.style.color='#1e90ff';">
+                            info@EagleEyesSearch.com
+                        </span>
+                    </p>
+                    <p style="margin: 15px 0; color: #555; font-size: 1.5rem; font-weight: 500;">or</p>
+                    <button onclick="openQuestionModal()" style="background: #1e90ff; color: white; border: none; padding: 14px 32px; font-size: 1.4rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(30, 144, 255, 0.3);" onmouseover="this.style.background='#1873cc'; this.style.boxShadow='0 4px 12px rgba(30, 144, 255, 0.4)';" onmouseout="this.style.background='#1e90ff'; this.style.boxShadow='0 2px 8px rgba(30, 144, 255, 0.3)';">
+                        Submit a Question Here
+                    </button>
+                </div>
+            `;
             // Hide contact section when no results (it's redundant)
             if (contactSection) contactSection.style.display = 'none';
         } else {
@@ -1749,4 +1815,190 @@ function showEmailCopyNotification() {
         trackAnswerLinkClicks();
     }
 })();
+</script>
+
+<!-- Question Submission Modal Script -->
+<script>
+const QUESTION_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwvizcag5dnkiCRwljoewsLZjKjOeGWXh6SM5_Cclz9AWiR-6mmAL2m4BU-H100jDhL/exec';
+
+function openQuestionModal() {
+    const modal = document.getElementById('questionModal');
+    modal.style.display = 'flex';
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+}
+
+function closeQuestionModal() {
+    const modal = document.getElementById('questionModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    // Reset form
+    document.getElementById('questionForm').reset();
+}
+
+// Close modal when clicking outside of it
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('questionModal');
+    if (e.target === modal) {
+        closeQuestionModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('questionModal');
+        if (modal.style.display === 'flex') {
+            closeQuestionModal();
+        }
+    }
+});
+
+function showNotification(message, isSuccess = true) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: ${isSuccess ? '#4CAF50' : '#f44336'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        font-size: 1.2rem;
+        font-weight: 500;
+        z-index: 10001;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+async function submitQuestion(event) {
+    event.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const email = document.getElementById('userEmail').value.trim();
+    const name = document.getElementById('userName').value.trim();
+    const organization = document.getElementById('userOrganization').value.trim();
+    const question = document.getElementById('userQuestion').value.trim();
+    const fileInput = document.getElementById('userFile');
+    
+    // Validate required fields
+    if (!email || !question) {
+        showNotification('Red * indicates mandatory fields', false);
+        return;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Please enter a valid email address', false);
+        return;
+    }
+    
+    // File size validation (50MB max)
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+        if (file.size > maxSize) {
+            showNotification('File size must be under 50MB', false);
+            return;
+        }
+    }
+    
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading...';
+    submitBtn.style.opacity = '0.7';
+    submitBtn.style.cursor = 'not-allowed';
+    
+    try {
+        const payload = {
+            origin: window.location.origin,
+            email: email,
+            name: name || '',
+            organization: organization || '',
+            question: question,
+            page_path: window.location.pathname,
+            user_agent: navigator.userAgent
+        };
+        
+        console.log('📤 Sending payload:', payload);
+        
+        // Handle file upload if present
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            console.log('📎 File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
+            const base64 = await fileToBase64(file);
+            payload.file_name = file.name;
+            payload.file_type = file.type;
+            payload.file_base64 = base64;
+            console.log('✅ File converted to base64');
+        }
+        
+        const response = await fetch(QUESTION_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain',
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log('📥 Response status:', response.status);
+        const responseText = await response.text();
+        console.log('📥 Raw response text:', responseText);
+        
+        let result;
+        try {
+            result = JSON.parse(responseText);
+            console.log('📥 Parsed response data:', result);
+        } catch (parseError) {
+            console.error('❌ Failed to parse response as JSON:', parseError);
+            throw new Error('Invalid response from server');
+        }
+        
+        if (result.ok === true) {
+            showNotification('Thank you! We\'ll get back to you soon.', true);
+            closeQuestionModal();
+        } else {
+            console.error('❌ Result:', result);
+            throw new Error(result.error || 'Submission failed');
+        }
+    } catch (error) {
+        console.error('❌ Question submission error:', error);
+        showNotification('Something went wrong. Please email us directly at info@EagleEyesSearch.com', false);
+    } finally {
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Question';
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+    }
+}
+
+// Convert file to base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            // Remove the data:...;base64, prefix
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
 </script> 
